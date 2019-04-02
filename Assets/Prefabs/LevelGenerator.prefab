@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1161510506933145412
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1161510506933145411}
+  - component: {fileID: 1161510506933145410}
+  m_Layer: 0
+  m_Name: LevelGenerator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1161510506933145411
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1161510506933145412}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1161510506933145410
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1161510506933145412}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec4798331e7b10c48a1bd7a9b03bf884, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  startY: 0
+  gap: 4
+  minX: -1.5
+  maxX: 1.5
+  initialPlatforms: 5
+  maxPlatforms: 10
+  pickupChange: 20
+  player: {fileID: 0}
+  platformPrefabs:
+  - {fileID: 5776706524980944020, guid: c8666d6558509c245bd5660018175b29, type: 3}
+  - {fileID: 7122036023539311531, guid: da589f45e0acec648af2776b1db92d90, type: 3}
+  backgroundPrefab: {fileID: 4491514547946757515, guid: 716257de171feda4981cc05836e538fe,
+    type: 3}
+  pickupPrefabs:
+  - {fileID: 8095320011585738844, guid: cc668f241e9a7b84888a197180c83360, type: 3}
+  - {fileID: 7536973028680302046, guid: d956587e70b764e4ba9de702ea3e7d4e, type: 3}
+  - {fileID: 7654519642363860428, guid: c332682cd8d9fb647a3b2890eea321d7, type: 3}
+  - {fileID: 4074516591284618815, guid: ebe1a94f7e9504640a023e08e92ad8e8, type: 3}
+  stringLibrary: {fileID: 5822839457024534906, guid: 97c4b3a55c0a60742a9289cddf9d2097,
+    type: 3}
+  distractionLenght: 5

@@ -1,0 +1,927 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class CameraMovement : MonoBehaviour
+{
+    [SerializeField] private float offsetY;
+    [SerializeField] private Transform target;
+
+    private void Update()
+    {
+        if (target.transform.position.y + offsetY > transform.position.y)
+        {
+            Vector3 position = transform.position;
+            position.y = target.transform.position.y + offsetY;
+            transform.position = position;
+        }
+    }
+}
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class DeathZone : MonoBehaviour
+{
+    [SerializeField] private float delay = 2;
+    [SerializeField] private SceneReload sceneReload;
+    [SerializeField] private SoundLibrary soundLibrary;
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        //Starts the game over if the player hits the deathzone
+        if (collision.transform.CompareTag("Player"))
+        {
+            sceneReload.EndGame();
+            soundLibrary.PlayfailiureSound();
+            Debug.Log("whoops you lost");
+        }
+    }
+}
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class DeathZoneMovement : MonoBehaviour
+{
+    [SerializeField] private float upwardsPush = 1;
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.transform.CompareTag("Player"))
+        {
+            transform.position = new Vector2(0f, transform.position.y + upwardsPush);
+
+        }
+    }
+}
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class IntroManager : MonoBehaviour
+{
+    [SerializeField] private float timeBetweenImages = 5;
+    [SerializeField] private GameObject[] images;
+
+    private void Start()
+    {
+        foreach (GameObject image in images)
+        {
+            image.SetActive(false);
+        }
+        StartCoroutine(Intro());
+    }
+
+    private IEnumerator Intro()
+    {
+        int index = 1;
+        images[0].SetActive(true);
+        yield return new WaitForSeconds(timeBetweenImages);
+        while (index < images.Length)
+        {
+            if (index > 0)
+            {
+                images[index - 1].GetComponent<Animator>().SetTrigger("Out");
+            }
+            images[index].SetActive(true);
+            images[index].GetComponent<Animator>().SetTrigger("In");
+            yield return new WaitForSeconds(0.5f);
+            if (index > 0)
+            {
+                images[index - 1].SetActive(false);
+            }
+            yield return new WaitForSeconds(timeBetweenImages - 0.5f);
+            index++;
+        }
+        for (int i = 0; i < images.Length - 1; i++)
+        {
+            images[i].SetActive(false);
+        }
+        images[images.Length - 1].GetComponent<Animator>().SetTrigger("Slide");
+    }
+}
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class LevelGenerator : MonoBehaviour
+{
+    [SerializeField] private float startY;
+    [SerializeField] private float gap;
+    [SerializeField] private float minX;
+    [SerializeField] private float maxX;
+    [SerializeField] private int initialPlatforms;
+    [SerializeField] private int maxPlatforms;
+    [SerializeField] [Range(0, 100)] private int pickupChange;
+    [SerializeField] private GameObject player;
+    [SerializeField] private GameObject[] platformPrefabs;
+    [SerializeField] private GameObject backgroundPrefab;
+    [SerializeField] private GameObject[] pickupPrefabs;
+
+    private Queue<GameObject> platforms = new Queue<GameObject>();
+    private Queue<GameObject> backgrounds = new Queue<GameObject>();
+    private float currentY;
+    private float lastSpawnY;
+
+    [SerializeField] private StringLibrary stringLibrary;
+    [SerializeField] private int distractionLenght = 5;
+    [SerializeField] private GameObject BgSpeechPefab;
+    [SerializeField] private GameObject BgThoughtPrefab;
+    [SerializeField] private float bubbleOffset = 3;
+    [SerializeField] private float bubbleDown = 12;
+
+    [SerializeField] private Text curseText1;
+    [SerializeField] private Text curseText2;
+    [SerializeField] private Text curseText3;
+    [SerializeField] private Text curseText4;
+    [SerializeField] private Text curseText5;
+
+    [SerializeField] private Text messageText1;
+    [SerializeField] private Text messageText2;
+    [SerializeField] private Text messageText3;
+    [SerializeField] private Text messageText4;
+    [SerializeField] private Text messageText5;
+
+    private int curseCount = 0;
+    private int messageCount = 0;
+
+    private void Start()
+    {
+        currentY = startY;
+        lastSpawnY = player.transform.position.y;
+        for (int i = 0; i < initialPlatforms; i++)
+        {
+            Spawn();
+        }
+    }
+
+    private void Update()
+    {
+        if (player.transform.position.y >= lastSpawnY + gap)
+        {
+            Spawn();
+            lastSpawnY += gap;
+        }
+    }
+
+    private void Spawn()
+    {
+        // Spawn platform
+        GameObject platform = Instantiate(platformPrefabs[Random.Range(0, platformPrefabs.Length)], new Vector3(Random.Range(minX, maxX), currentY, 0), Quaternion.identity);
+        platforms.Enqueue(platform);
+        // Spawn background
+        GameObject background = Instantiate(backgroundPrefab, new Vector3(Random.Range(minX, maxX), currentY, 0), Quaternion.identity);
+        background.GetComponent<Animator>().SetInteger("Animation", Random.Range(1, 5));
+        backgrounds.Enqueue(background);
+        // Spawn pickup
+        if (Random.Range(0, 100) < pickupChange)
+        {
+            Instantiate(pickupPrefabs[Random.Range(0, pickupPrefabs.Length)], new Vector3(Random.Range(minX, maxX), currentY + 1, 0), Quaternion.identity);
+        }
+        // Destory oldest platform
+        if (platforms.Count >= maxPlatforms)
+        {
+            Destroy(backgrounds.Dequeue());
+            Destroy(platforms.Dequeue());
+        }
+
+        currentY += gap;
+    }
+
+    public void BackgroundCurse()
+    {
+        StartCoroutine(BgCurse());
+    }
+
+    public void BackgroundMessage()
+    {
+        StartCoroutine(BgMessage());
+    }
+
+    private IEnumerator BgCurse()
+    {
+        Debug.Log(stringLibrary.curseText[curseCount]);
+        BgThoughtPrefab.SetActive(true);
+        BgThoughtPrefab.transform.position = new Vector3(bubbleOffset, currentY - bubbleDown, 0);
+        if (curseCount > stringLibrary.curseLenght)
+        {
+            curseCount = 0;
+        }
+        curseText1.text = stringLibrary.curseText[curseCount];
+        curseCount++;
+        if (curseCount > stringLibrary.curseLenght)
+        {
+            curseCount = 0;
+        }
+        curseText2.text = stringLibrary.curseText[curseCount];
+        curseCount++;
+        if (curseCount > stringLibrary.curseLenght)
+        {
+            curseCount = 0;
+        }
+        curseText3.text = stringLibrary.curseText[curseCount];
+        curseCount++;
+        if (curseCount > stringLibrary.curseLenght)
+        {
+            curseCount = 0;
+        }
+        curseText4.text = stringLibrary.curseText[curseCount];
+        curseCount++;
+        if (curseCount > stringLibrary.curseLenght)
+        {
+            curseCount = 0;
+        }
+        curseText5.text = stringLibrary.curseText[curseCount];
+        curseCount++;
+        if (curseCount > stringLibrary.curseLenght)
+        {
+            curseCount = 0;
+        }
+
+        yield return new WaitForSeconds(distractionLenght);
+        BgThoughtPrefab.SetActive(false);
+    }
+
+    private IEnumerator BgMessage()
+    {
+        if (messageCount > stringLibrary.messageLength)
+        {
+            messageCount = 0;
+        }
+        Debug.Log(stringLibrary.messageText[messageCount]);
+        BgSpeechPefab.SetActive(true);
+        Vector3 temp = new Vector3(7.0f, 0, 0);
+        BgSpeechPefab.transform.position = new Vector3(bubbleOffset, currentY - bubbleDown, 0);
+        if (messageCount > stringLibrary.messageLength)
+        {
+            messageCount = 0;
+        }
+        messageText1.text = stringLibrary.messageText[messageCount];
+        messageCount++;
+        if (messageCount > stringLibrary.messageLength)
+        {
+            messageCount = 0;
+        }
+        messageText2.text = stringLibrary.messageText[messageCount];
+        messageCount++;
+        if (messageCount > stringLibrary.messageLength)
+        {
+            messageCount = 0;
+        }
+        messageText3.text = stringLibrary.messageText[messageCount];
+        messageCount++;
+        if (messageCount > stringLibrary.messageLength)
+        {
+            messageCount = 0;
+        }
+        messageText4.text = stringLibrary.messageText[messageCount];
+        messageCount++;
+        if (messageCount > stringLibrary.messageLength)
+        {
+            messageCount = 0;
+        }
+        messageText5.text = stringLibrary.messageText[messageCount];
+        messageCount++;
+        if (messageCount > stringLibrary.messageLength)
+        {
+            messageCount = 0;
+        }
+
+        yield return new WaitForSeconds(distractionLenght);
+        BgSpeechPefab.SetActive(false);
+    }
+}
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class LoadGame : MonoBehaviour
+{
+    // Start is called before the first frame update
+    private void Start()
+    {
+        StartCoroutine(StartGame());
+    }
+
+    private IEnumerator StartGame()
+    {
+        yield return new WaitForSeconds(2);
+        SceneManager.LoadScene("Game");
+    }
+}
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class NoiseArray : MonoBehaviour
+{
+    // Start is called before the first frame update
+    void Start()
+    {
+        
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+}
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Events;
+
+[RequireComponent(typeof(BoxCollider2D))]
+public class Pickup : MonoBehaviour
+{
+    [SerializeField] private UnityEvent onPick;
+
+    private void Update()
+    {
+        transform.Translate(new Vector3(0, -1, 0) * Time.deltaTime);
+    }
+
+    private void OnTriggerEnter2D(Collider2D collider)
+    {
+        if (collider.gameObject.CompareTag("Player"))
+        {
+            onPick.Invoke();
+            Destroy(gameObject);
+            Debug.Log("Pickup taken");
+        }
+    }
+}
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+[RequireComponent(typeof(Animator))]
+public class Platform : MonoBehaviour
+{
+    private Animator animator;
+    
+    private void Start()
+    {
+        animator = GetComponent<Animator>();
+    }
+
+    private void OnBecameVisible()
+    {
+        StartCoroutine(Reveal());
+    }
+
+    private IEnumerator Reveal()
+    {
+        yield return new WaitForSeconds(0);
+        animator.SetTrigger("Reveal");
+    }
+}
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class PlayerInterraction : MonoBehaviour
+{
+    [SerializeField] private int jumpForce = 10;
+    [SerializeField] private int speed = 10;
+    [SerializeField] private float delay;
+    [SerializeField] private Rigidbody2D player;
+    [SerializeField] private SceneReload sceneReload;
+    [SerializeField] private Transform playerBody;
+
+    [SerializeField] private float timerFeather = 1;
+    [SerializeField] private float timerDistraction = 10;
+    [SerializeField] private float lowGravity = 0.1f;
+    [SerializeField] private float highGravity = 10;
+
+    [SerializeField] SoundLibrary soundLibrary;
+    [SerializeField] LevelGenerator levelGenerator;
+
+    private Vector2 target;
+    private Animator animator;
+
+
+    private void Start()
+    {
+        player = GetComponent<Rigidbody2D>();
+        animator = GetComponentInChildren<Animator>();
+    }
+
+    private void FixedUpdate()
+    {
+        animator.SetFloat("VelocityY", player.velocity.y);
+#if UNITY_EDITOR
+        target = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+
+        if (Input.GetMouseButton(0))
+        {
+            //starting the game by changing the player body type
+            player.bodyType = RigidbodyType2D.Dynamic;
+
+            float step = speed * Time.deltaTime;
+            transform.position = Vector2.MoveTowards(transform.position, new Vector2(target.x, transform.position.y), step);
+            Time.timeScale = Input.mousePosition.y / Screen.height * 2;
+        }
+
+        else if(Input.GetMouseButtonUp(0))
+        {
+            //The game starts over if the mouse (or finger) is lifted
+            sceneReload.EndGame();
+            soundLibrary.PlayfailiureSound();
+            Debug.Log("whoops you lost");
+        }
+#endif
+#if UNITY_ANDROID
+        if(Input.touchCount > 0)
+        {
+            Touch touch = Input.GetTouch(0);
+            target = Camera.main.ScreenToWorldPoint(touch.position);
+            switch (touch.phase)
+            {
+                case TouchPhase.Began:
+                {
+                        player.bodyType = RigidbodyType2D.Dynamic;
+                        break;
+                }
+
+                case TouchPhase.Stationary:
+                case TouchPhase.Moved:
+                {
+                        float step = speed * Time.deltaTime;
+                        transform.position = Vector2.MoveTowards(transform.position, new Vector2(target.x, transform.position.y), step);
+                        Time.timeScale = touch.position.y / Screen.height * 2;
+                        break;
+                }                 
+
+                case TouchPhase.Ended:
+                {
+                        sceneReload.EndGame();
+                        break;
+                }                    
+            }
+        }
+#endif
+    }
+
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        //makes the player jump off of platforms
+        if (collision.transform.CompareTag("Platform") && collision.enabled)
+        {
+            player.velocity = new Vector2(player.velocity.x, jumpForce);
+            animator.SetTrigger("Jump");
+            soundLibrary.PlayjumpSound();
+            //Debug.Log("moving upwards");
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.transform.CompareTag("Feather"))
+        {
+            StartCoroutine(FeatherCor());
+        }
+
+        if (collision.transform.CompareTag("Distraction"))
+        {
+            StartCoroutine(NoiseCor());
+        }
+
+
+        if (collision.transform.CompareTag("DistractionStory"))
+        {
+            //StartCoroutine(NoiseCor());
+            levelGenerator.BackgroundCurse();
+        }
+
+
+        if (collision.transform.CompareTag("DistractionNoise"))
+        {
+            //StartCoroutine(NoiseCor());
+            levelGenerator.BackgroundMessage();
+        }
+    }
+
+    private IEnumerator FeatherCor()
+    {
+        Debug.Log("light as a feather");
+        soundLibrary.PlayFeatherSound();
+        player.gravityScale = lowGravity;
+        yield return new WaitForSeconds(timerFeather);
+        player.gravityScale = 1;
+        Debug.Log("Corutine End");
+    }
+
+    private IEnumerator NoiseCor()
+    {
+        Debug.Log("NISE SOUNDS!!!!");
+        soundLibrary.PlayNoiseSounds();
+        yield return new WaitForSeconds(timerDistraction);
+    }
+}
+
+
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using UnityEngine;
+
+public class ReadSource : MonoBehaviour
+{
+    [SerializeField] private GameObject sourcePanel;
+
+    private void Start()
+    {
+#if UNITY_EDITOR
+        string source = string.Empty;
+        string[] files = Directory.GetFiles(Application.dataPath + "/Scripts/", "*.cs");
+        foreach (string file in files)
+        {
+            source += File.ReadAllText(file, Encoding.UTF8) + Environment.NewLine + Environment.NewLine;
+        }
+        File.WriteAllText(Application.dataPath + "/source.txt", source);
+#endif
+    }
+
+    private void Update()
+    {
+        if (Input.touchCount >= 3)
+        {
+            sourcePanel.SetActive(true);
+        }
+    }
+}
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class Retry : MonoBehaviour
+{
+    public void RetryGame()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+}
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+
+public class SceneReload : MonoBehaviour
+{
+    [SerializeField] Transform EndPanel;
+    [SerializeField] Transform Player;
+    //reloads the scene
+    public void EndGame()
+    {
+        Player.gameObject.SetActive(false);
+        EndPanel.gameObject.SetActive(true);
+    }
+}
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class SoundLibrary : MonoBehaviour
+{
+    [SerializeField] private AudioClip featherSound;
+    [SerializeField] private AudioClip jumpSound;
+    [SerializeField] private AudioClip failiureSound;
+    [SerializeField] private AudioClip[] NoiseSounds;
+
+    public void PlayfailiureSound()
+    {
+        SoundManager.instance.EfxOut1(failiureSound);
+    }
+
+    public void PlayFeatherSound()
+    {
+        SoundManager.instance.EfxOut2(featherSound);
+    }
+
+    public void PlayjumpSound()
+    {
+        SoundManager.instance.EfxOut3(jumpSound);
+    }
+
+    public void PlayNoiseSounds()
+    {
+        SoundManager.instance.EfxOut4(NoiseSounds[Random.Range(0, NoiseSounds.Length)]);
+    }
+}
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class SoundManager : MonoBehaviour
+{
+    public AudioSource bgTheme;
+    public AudioSource efxSource1;
+    public AudioSource efxSource2;
+    public AudioSource efxSource3;
+    public static SoundManager instance = null;
+
+    void Awake()
+    {
+        if (instance == null)
+            instance = this;
+
+        else if (instance != this)
+            Destroy(gameObject);
+
+        DontDestroyOnLoad(gameObject);
+    }
+
+    private void Start()
+    {
+        bgTheme.Play();
+    }
+
+    public void EfxOut1(AudioClip clip)
+    {
+        if (efxSource1.isPlaying == false)
+        {
+            efxSource1.clip = clip;
+            efxSource1.PlayOneShot(clip);
+        }
+    }
+
+    public void EfxOut2(AudioClip clip)
+    {
+        if (efxSource1.isPlaying == false)
+        {
+            efxSource1.clip = clip;
+            efxSource1.PlayOneShot(clip);
+        }
+    }
+
+    public void EfxOut3(AudioClip clip)
+    {
+        if (efxSource2.isPlaying == false)
+        {
+            efxSource2.clip = clip;
+            efxSource2.PlayOneShot(clip);
+        }
+    }
+
+    public void EfxOut4(AudioClip clip)
+    {
+        if (efxSource3.isPlaying == false)
+        {
+            efxSource3.clip = clip;
+            efxSource3.PlayOneShot(clip);
+        }
+    }
+}
+
+
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class StringLibrary : MonoBehaviour
+{
+    public int curseLenght;
+    public int messageLength;
+
+    public List<string> curseText = new List<string>(new string[]
+    {
+        "Bosses have their minds set on getting that for the company.",
+        "Yeah, it'll surely skyrocket their careers.",
+        "Upper management will be ecstatic.",
+        "They've been looking for an upper edge for decades now.",
+        "And if this works out…",
+        "...and someone can extract it finally…",
+        "...then they'll be the fucking employee of the decade!",
+        "Karen has a plan how to do it.",
+        "I heard she has had…",
+        "...hushed meetings with Rex lately.",
+        "But HR is breathing down on them though.",
+        "They are looking for any mistake in the plan, to shut it down.",
+        "If it gets too risky, then yeah, that'd be best.",
+        "I don't want to end up on the street…",
+        "...if the police shuts this place down for good.",
+        "Although no local police can really shut down the whole thing.",
+        "This shit is like Illuminati!",
+        "It will just go on somewhere else…",
+        "... until they get a new foothold in here.",
+        "But I can't take that risk.",
+        "Little low-levels like me could end up behind bars.",
+        "And that's just bullshit!",
+        "I know too much already, I never wanted to know.",
+        "I heard Karen say she found a potential source.",
+        "And Rex, he was… smiling the other day.",
+        "So they must be really onto something.",
+        "Maybe I should just tell HR what I know…",
+        "... before things get too hot.",
+        "Although if I leave them be and they succeed…",
+        "... something good could trickle down as well.",
+        "Rewards could be amazing!",
+        "But at what cost?",
+        "When I went to the office basement…",
+        "...I swear I heard screams in there.",
+        "Sure, it could have been something else!",
+        "Any noise can be distorted within those echoes.",
+        "Sure it was just a car screeching off.",
+        "But it.. did sound like a scream…",
+        "...that cut off, abruptly.",
+        "Upper management have been after souls…",
+        "... they're obsessed with them.",
+        "Souls are immortal...",
+        "...if you want to believe in shit like that.",
+        "And management sure does.",
+        "Souls trapped in jars, sounds… icky.",
+        "Karen got too involved with nursing homes.",
+        "They got too suspicious.",
+        "I have my own suspicions…",
+        "...on where she now gets her subjects.",
+        "Rex doesn't care where they come from.",
+        "That fellow sure is result-oriented.",
+        "That could get him far in the company.",
+        "Management really does like results.",
+        "But if people keep disappearing…",
+        "...someone will get a sniff of what's going on.",
+        "Karen is too ambitious.",
+        "She'll get reckless.",
+        "She'll make a mistake.",
+        "HR will jump on her",
+        "Karen is also the kind of person…",
+        "...who'll throw anyone under the bus.",
+        "If it'll help her survive.",
+        "I really don't like buses.",
+        "Especially getting run over by them.",
+        "I can't help but picture it in my head.",
+"Would she try to get my soul as well?",
+"I'm out there, bleeding out…",
+"She, leaning over me, looking in my eyes.",
+"Rex, impatiently waiting for my last breath.",
+"And floating upwards, but being cut off.",
+"Being janked into a container.",
+"Being trapped, for all eternity.",
+"As they surely wouldn't…",
+"...insert my lowly soul into any new body.",
+"Those are reserved for high-ups.",
+"Management might want eternity…",
+"...but I'm quite content with my lifespan.",
+"Karen seemed quite impatient.",
+"When I left the office.",
+"She looked like she was going to…",
+"... bite the head off anyone distracting her.",
+"She kept looking at the clock.",
+"Just waiting for others to leave.",
+"Poor Maddy, who had the evening shift.",
+"She's going to be right there…",
+"...in the middle of it.",
+"When shit hits the fan.",
+"Karen needs to hurry if…",
+"...she want to get it done tonight.",
+"Robby, from HR, has contacts at the police.",
+"And saving the company from bad rep…",
+"...that would boost his career.",
+"Rob just needs that last bit of evidence against them.",
+"And an access card to the basement.",
+"That's why he's been hitting on…",
+"...that new chick at the office.",
+"Merry's so infatuated with him.",
+"She'd do anything.",
+"Like hand over an exclusive card…",
+"...simply because he says that he…",
+"...left his own at his desk, or something.",
+"And he really need a card to get…",
+"...coffee from the cafeteria for the two of them.",
+"She'd fall for shit like that in an instant.",
+"And there! Rob has his access.",
+"He smiles at Merry…",
+"...who thinks she has a shot with him.",
+"And Rob heads downstairs.",
+"Not to the cafe of course.",
+"But to the garage.",
+"To the basement.",
+"The card makes a peculiar pling…",
+"...when it opens the lock.",
+"And Rex'll be there.",
+"Probably covered in blood.",
+"And something in his hand…",
+"...that can be used as a weapon.",
+"I hope Rob has good reflexes.",
+"And thenagain, I don't.",
+"No witness, no worries.",
+"But Rob's no fool, he's prepared.",
+"He has a cell in his hand…",
+"...ready to press the call.",
+"If he is as smart as he seems…",
+"...he'd have called the cops even before that.",
+"So that they are close by, just waiting for the call.",
+"Any way this goes, it's going to be ugly.",
+"Glad I'm not there to see it."
+
+    });
+
+    public List<string> messageText = new List<string>(new string[]
+    {
+        "HR keeps calling me!",
+        "Are they onto us?",
+        "Do you know anyone at HR?",
+        "Why aren't you answering any messages?!",
+        "Have you heard anything from Merry?",
+        "Answer me!",
+        "This is an emergency!",
+        "Are you home?",
+        "We need you to get back to office immediately!",
+        "I swear I hear the sirens already",
+        "They'll get you too!",
+        "So don't just ignore me!",
+        "Come on, just pick up the phone!",
+        "I swear I'll come knock your doors down!",
+        "I'll tip HR off myself",
+        "So maybe I'll have sanctuary",
+        "You want in on it??",
+        "I need a 'yes' right away!",
+        "I got Jey onboard",
+        "He just burst into my office",
+        "He's flabbergasted!",
+        "Never thought I'd use that word",
+        "But it suits him perfect!",
+        "Eyes as wide as plates, I tell you",
+        "He said he was downstairs",
+        "Just came from the garage",
+        "Keeps repeating he saw something",
+        "I don't want to know details",
+        "Or we'll all end up in padded rooms",
+        "Jey's hellbent on getting the boss sacked",
+        "He says he won't stand for this shit",
+        "Are you getting these messages at all??",
+        "Helloooo??!!?!",
+        "Jey's about to call the cops on corp",
+        "We can't let him do that?",
+        "Right??!",
+        "Cops'll bust us too",
+        "Drag your ass here right now!",
+        "Don't leave me handle this shit alone",
+        "I can't do this on my own",
+        "I need you, right now!",
+        "You can talk sense into him",
+        "Honestly, Jey's going mental",
+        "Merry just came by my cubicle",
+        "She keeps talking about that Rob",
+        "She actually can't shut up about him",
+        "Doesn't she get what's going on??",
+        "OMG!!! OMFG!!!!!!",
+        "Merry gave her key to HR!!",
+        "We're screwed!",
+        "I'm getting out of there",
+        "When you get these msgs",
+        "Just run! Hide! Keep away!",
+        "Oh fuckfuckfuck---",
+        "Don't contact me again!",
+    });
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        curseLenght = curseText.Count;
+        Debug.Log("Curses: " + curseLenght);
+        messageLength = messageText.Count;
+        Debug.Log("Messages: " + messageLength);
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+
+    }
+}
+
+
